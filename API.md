@@ -4,6 +4,14 @@
 
 ### CloudfrontAliasAssociator <a name="CloudfrontAliasAssociator" id="cdk-cloudfront-associate-alias.CloudfrontAliasAssociator"></a>
 
+A simple construct to handle automated Cloudfront DNS alias migration with zero downtime.
+
+This creates:
+- A TXT record with the name `_${alias}` that points to the targetDistributionDomainName.
+- A Cloudfront custom resource "Custom::CloudfrontAssociateAlias" that associates the alias with the targetDistributionId.
+  - Because we use the SDK here, this construct can be used as part of a versioned deployment, and can be used for both standard and rollback scenarios.
+- A Route53 A and AAAA record that alias to the targetDistribution.
+
 #### Initializers <a name="Initializers" id="cdk-cloudfront-associate-alias.CloudfrontAliasAssociator.Initializer"></a>
 
 ```typescript
@@ -114,17 +122,16 @@ The tree node.
 
 | **Name** | **Type** | **Description** |
 | --- | --- | --- |
-| <code><a href="#cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.customDomain">customDomain</a></code> | <code>string</code> | *No description.* |
-| <code><a href="#cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.hostedZone">hostedZone</a></code> | <code>aws-cdk-lib.aws_route53.IHostedZone</code> | *No description.* |
-| <code><a href="#cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.targetDistributionDomainName">targetDistributionDomainName</a></code> | <code>string</code> | *No description.* |
-| <code><a href="#cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.targetDistributionId">targetDistributionId</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.alias">alias</a></code> | <code>string</code> | *No description.* |
+| <code><a href="#cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.hostedZone">hostedZone</a></code> | <code>aws-cdk-lib.aws_route53.IHostedZone</code> | The Route53 hosted zone that houses the customDomain. |
+| <code><a href="#cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.targetDistribution">targetDistribution</a></code> | <code>aws-cdk-lib.aws_cloudfront.IDistribution</code> | The Cloudfront Distribution we want to move the alias to. |
 
 ---
 
-##### `customDomain`<sup>Required</sup> <a name="customDomain" id="cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.customDomain"></a>
+##### `alias`<sup>Required</sup> <a name="alias" id="cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.alias"></a>
 
 ```typescript
-public readonly customDomain: string;
+public readonly alias: string;
 ```
 
 - *Type:* string
@@ -139,25 +146,19 @@ public readonly hostedZone: IHostedZone;
 
 - *Type:* aws-cdk-lib.aws_route53.IHostedZone
 
----
-
-##### `targetDistributionDomainName`<sup>Required</sup> <a name="targetDistributionDomainName" id="cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.targetDistributionDomainName"></a>
-
-```typescript
-public readonly targetDistributionDomainName: string;
-```
-
-- *Type:* string
+The Route53 hosted zone that houses the customDomain.
 
 ---
 
-##### `targetDistributionId`<sup>Required</sup> <a name="targetDistributionId" id="cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.targetDistributionId"></a>
+##### `targetDistribution`<sup>Required</sup> <a name="targetDistribution" id="cdk-cloudfront-associate-alias.ICloudfrontAliasAssociatorProps.property.targetDistribution"></a>
 
 ```typescript
-public readonly targetDistributionId: string;
+public readonly targetDistribution: IDistribution;
 ```
 
-- *Type:* string
+- *Type:* aws-cdk-lib.aws_cloudfront.IDistribution
+
+The Cloudfront Distribution we want to move the alias to.
 
 ---
 
