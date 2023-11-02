@@ -7,12 +7,32 @@ import * as cr from "aws-cdk-lib/custom-resources";
 import { Construct } from "constructs";
 
 export interface ICloudfrontAliasAssociatorProps {
+  /**
+   * @alias AKA "customDomain" or "the DNS record we want to affect".
+   *
+   * This is the domain name you want to move from one Cloudfront Distribution to another.
+   * Will also work if it is NOT moving (on the first run).
+   * */
+  readonly alias: string;
+  /**
+   * The Route53 hosted zone that houses the customDomain.
+   */
   readonly hostedZone: route53.IHostedZone;
-  readonly customDomain: string;
-  readonly targetDistributionId: string;
-  readonly targetDistributionDomainName: string;
+  /**
+   * The Cloudfront Distribution we want to move the alias to.
+   */
+  readonly targetDistribution: cloudfront.IDistribution;
 }
 
+/**
+ * A simple construct to handle automated Cloudfront DNS alias migration with zero downtime.
+ *
+ * This creates:
+ * - A TXT record with the name `_${alias}` that points to the targetDistributionDomainName.
+ * - A Cloudfront custom resource "Custom::CloudfrontAssociateAlias" that associates the alias with the targetDistributionId.
+ *   - Because we use the SDK here, this construct can be used as part of a versioned deployment, and can be used for both standard and rollback scenarios.
+ * - A Route53 A and AAAA record that alias to the targetDistribution.
+ */
 export class CloudfrontAliasAssociator extends Construct {
   private readonly aliasTxtRecord: route53.TxtRecord;
   private readonly associatedAlias: cr.AwsCustomResource;
@@ -32,8 +52,8 @@ export class CloudfrontAliasAssociator extends Construct {
   private createAliasTxtRecord(): route53.TxtRecord {
     return new route53.TxtRecord(this, `${this.id}-AliasTxtRecord`, {
       zone: this.props.hostedZone,
-      recordName: `_${this.props.customDomain}`, // underscore intentional and important
-      values: [this.props.targetDistributionDomainName],
+      recordName: `_${this.props.alias}`, // underscore intentional and important
+      values: [this.props.targetDistribution.distributionDomainName],
     });
   }
 
@@ -41,8 +61,8 @@ export class CloudfrontAliasAssociator extends Construct {
     const associateAliasParams =
       //: AssociateAliasCommandInput // Uncomment this line, install, and import the type to get type checking for development, but JSII doesn't like it for building
       {
-        TargetDistributionId: this.props.targetDistributionId,
-        Alias: this.props.customDomain,
+        TargetDistributionId: this.props.targetDistribution.distributionId,
+        Alias: this.props.alias,
       };
 
     const associateAlias = new cr.AwsCustomResource(
@@ -56,7 +76,7 @@ export class CloudfrontAliasAssociator extends Construct {
           action: "AssociateAlias",
           parameters: associateAliasParams,
           physicalResourceId: cr.PhysicalResourceId.of(
-            this.props.targetDistributionDomainName,
+            this.props.targetDistribution.distributionId,
           ),
         },
         policy: cr.AwsCustomResourcePolicy.fromStatements([
@@ -79,28 +99,19 @@ export class CloudfrontAliasAssociator extends Construct {
 
   private createAliasRecords(): void {
     const target = route53.RecordTarget.fromAlias(
-      new r53Targets.CloudFrontTarget(
-        cloudfront.Distribution.fromDistributionAttributes(
-          this,
-          `${this.id}-DistributionTarget`,
-          {
-            distributionId: this.props.targetDistributionId,
-            domainName: this.props.targetDistributionDomainName,
-          },
-        ),
-      ),
+      new r53Targets.CloudFrontTarget(this.props.targetDistribution),
     );
 
     const aRecord = new route53.ARecord(this, `${this.id}-ARecord`, {
       zone: this.props.hostedZone,
-      recordName: this.props.customDomain,
+      recordName: this.props.alias,
       target,
     });
     aRecord.node.addDependency(this.associatedAlias);
 
     const aaaaRecord = new route53.AaaaRecord(this, `${this.id}-AaaaRecord`, {
       zone: this.props.hostedZone,
-      recordName: this.props.customDomain,
+      recordName: this.props.alias,
       target,
     });
     aaaaRecord.node.addDependency(this.associatedAlias);
