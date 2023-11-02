@@ -34,7 +34,7 @@ export interface ICloudfrontAliasAssociatorProps {
  * - A Route53 A and AAAA record that alias to the targetDistribution.
  */
 export class CloudfrontAliasAssociator extends Construct {
-  private readonly aliasTxtRecord: route53.TxtRecord;
+  private readonly aliasTxtRecord: cr.AwsCustomResource;
   private readonly associatedAlias: cr.AwsCustomResource;
 
   constructor(
@@ -49,11 +49,47 @@ export class CloudfrontAliasAssociator extends Construct {
     this.createAliasRecords();
   }
 
-  private createAliasTxtRecord(): route53.TxtRecord {
-    return new route53.TxtRecord(this, `${this.id}-AliasTxtRecord`, {
-      zone: this.props.hostedZone,
-      recordName: `_${this.props.alias}`, // underscore intentional and important
-      values: [this.props.targetDistribution.distributionDomainName],
+  /** Important to use the SDK rather than CDK, since AssociateAlias deletes this record and Cfn gets confused. */
+  private createAliasTxtRecord(): cr.AwsCustomResource {
+    const txtParams = {
+      HostedZoneId: this.props.hostedZone.hostedZoneId,
+      ChangeBatch: {
+        Changes: [
+          {
+            Action: "UPSERT",
+            ResourceRecordSet: {
+              Name: `_${this.props.alias}`,
+              Type: "TXT",
+              TTL: 300,
+              ResourceRecords: [
+                {
+                  Value: this.props.targetDistribution.distributionDomainName,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+
+    return new cr.AwsCustomResource(this, `${this.id}-AssociateAlias`, {
+      resourceType: "Custom::AliasTxtRecord",
+      onUpdate: {
+        // will also be called for a CREATE event
+        service: "route-53",
+        action: "ChangeResourceRecordSets",
+        parameters: txtParams,
+        physicalResourceId: cr.PhysicalResourceId.of(
+          this.props.targetDistribution.distributionId,
+        ),
+      },
+      policy: cr.AwsCustomResourcePolicy.fromStatements([
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ["route53:ChangeResourceRecordSets"],
+          resources: ["*"],
+        }),
+      ]),
     });
   }
 
