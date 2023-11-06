@@ -10,6 +10,7 @@ const project = new awscdk.AwsCdkConstructLibrary({
   projenrcTs: true,
   repositoryUrl:
     "https://github.com/dkershner6/cdk-cloudfront-associate-alias.git",
+  majorVersion: 1,
 
   // deps: [],                /* Runtime dependencies of this module. */
   description:
