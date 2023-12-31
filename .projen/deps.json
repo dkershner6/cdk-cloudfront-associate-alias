@@ -6,7 +6,7 @@
     },
     {
       "name": "@types/node",
-      "version": "^16",
+      "version": "^18",
       "type": "build"
     },
     {
@@ -20,11 +20,11 @@
       "type": "build"
     },
     {
-      "name": "eslint-config-prettier",
+      "name": "dkershner6-projen-typescript",
       "type": "build"
     },
     {
-      "name": "eslint-import-resolver-node",
+      "name": "eslint-config-prettier",
       "type": "build"
     },
     {
@@ -36,7 +36,15 @@
       "type": "build"
     },
     {
+      "name": "eslint-plugin-jest",
+      "type": "build"
+    },
+    {
       "name": "eslint-plugin-prettier",
+      "type": "build"
+    },
+    {
+      "name": "eslint-plugin-sonarjs",
       "type": "build"
     },
     {
@@ -86,6 +94,10 @@
     },
     {
       "name": "projen",
+      "type": "build"
+    },
+    {
+      "name": "projen-nvm",
       "type": "build"
     },
     {
