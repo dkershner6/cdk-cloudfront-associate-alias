@@ -8,7 +8,6 @@
   "plugins": [
     "@typescript-eslint",
     "import",
-    "prettier",
     "jest",
     "sonarjs"
   ],
@@ -20,7 +19,6 @@
   },
   "extends": [
     "plugin:import/typescript",
-    "prettier",
     "plugin:prettier/recommended",
     "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
@@ -53,9 +51,6 @@
     "!projenrc/**/*.ts"
   ],
   "rules": {
-    "prettier/prettier": [
-      "error"
-    ],
     "@typescript-eslint/no-require-imports": [
       "error"
     ],
