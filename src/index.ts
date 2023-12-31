@@ -7,21 +7,21 @@ import * as cr from "aws-cdk-lib/custom-resources";
 import { Construct } from "constructs";
 
 export interface ICloudfrontAliasAssociatorProps {
-  /**
-   * @alias AKA "customDomain" or "the DNS record we want to affect".
-   *
-   * This is the domain name you want to move from one Cloudfront Distribution to another.
-   * Will also work if it is NOT moving (on the first run).
-   * */
-  readonly alias: string;
-  /**
-   * The Route53 hosted zone that houses the customDomain.
-   */
-  readonly hostedZone: route53.IHostedZone;
-  /**
-   * The Cloudfront Distribution we want to move the alias to.
-   */
-  readonly targetDistribution: cloudfront.IDistribution;
+    /**
+     * @alias AKA "customDomain" or "the DNS record we want to affect".
+     *
+     * This is the domain name you want to move from one Cloudfront Distribution to another.
+     * Will also work if it is NOT moving (on the first run).
+     * */
+    readonly alias: string;
+    /**
+     * The Route53 hosted zone that houses the customDomain.
+     */
+    readonly hostedZone: route53.IHostedZone;
+    /**
+     * The Cloudfront Distribution we want to move the alias to.
+     */
+    readonly targetDistribution: cloudfront.IDistribution;
 }
 
 /**
@@ -34,86 +34,91 @@ export interface ICloudfrontAliasAssociatorProps {
  * - A Route53 A and AAAA record that alias to the targetDistribution.
  */
 export class CloudfrontAliasAssociator extends Construct {
-  private readonly aliasTxtRecord: route53.TxtRecord;
-  private readonly associatedAlias: cr.AwsCustomResource;
+    private readonly aliasTxtRecord: route53.TxtRecord;
+    private readonly associatedAlias: cr.AwsCustomResource;
 
-  constructor(
-    scope: Construct,
-    private readonly id: string,
-    private readonly props: ICloudfrontAliasAssociatorProps,
-  ) {
-    super(scope, id);
+    constructor(
+        scope: Construct,
+        private readonly id: string,
+        private readonly props: ICloudfrontAliasAssociatorProps,
+    ) {
+        super(scope, id);
 
-    this.aliasTxtRecord = this.createAliasTxtRecord();
-    this.associatedAlias = this.associateAlias();
-    this.createAliasRecords();
-  }
+        this.aliasTxtRecord = this.createAliasTxtRecord();
+        this.associatedAlias = this.associateAlias();
+        this.createAliasRecords();
+    }
 
-  private createAliasTxtRecord(): route53.TxtRecord {
-    return new route53.TxtRecord(this, `${this.id}-AliasTxtRecord`, {
-      zone: this.props.hostedZone,
-      recordName: `_${this.props.alias}`, // underscore intentional and important
-      values: [this.props.targetDistribution.distributionDomainName],
-    });
-  }
+    private createAliasTxtRecord(): route53.TxtRecord {
+        return new route53.TxtRecord(this, `${this.id}-AliasTxtRecord`, {
+            zone: this.props.hostedZone,
+            recordName: `_${this.props.alias}`, // underscore intentional and important
+            values: [this.props.targetDistribution.distributionDomainName],
+        });
+    }
 
-  private associateAlias(): cr.AwsCustomResource {
-    const associateAliasParams =
-      //: AssociateAliasCommandInput // Uncomment this line, install, and import the type to get type checking for development, but JSII doesn't like it for building
-      {
-        TargetDistributionId: this.props.targetDistribution.distributionId,
-        Alias: this.props.alias,
-      };
+    private associateAlias(): cr.AwsCustomResource {
+        const associateAliasParams =
+            //: AssociateAliasCommandInput // Uncomment this line, install, and import the type to get type checking for development, but JSII doesn't like it for building
+            {
+                TargetDistributionId:
+                    this.props.targetDistribution.distributionId,
+                Alias: this.props.alias,
+            };
 
-    const associateAlias = new cr.AwsCustomResource(
-      this,
-      `${this.id}-AssociateAlias`,
-      {
-        resourceType: "Custom::CloudfrontAssociateAlias",
-        onUpdate: {
-          // will also be called for a CREATE event
-          service: "cloudfront",
-          action: "AssociateAlias",
-          parameters: associateAliasParams,
-          physicalResourceId: cr.PhysicalResourceId.of(
-            this.props.targetDistribution.distributionId,
-          ),
-        },
-        policy: cr.AwsCustomResourcePolicy.fromStatements([
-          new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: [
-              "cloudfront:AssociateAlias",
-              "cloudfront:GetDistribution",
-              "cloudfront:UpdateDistribution",
-            ],
-            resources: ["*"],
-          }),
-        ]),
-      },
-    );
-    associateAlias.node.addDependency(this.aliasTxtRecord);
+        const associateAlias = new cr.AwsCustomResource(
+            this,
+            `${this.id}-AssociateAlias`,
+            {
+                resourceType: "Custom::CloudfrontAssociateAlias",
+                onUpdate: {
+                    // will also be called for a CREATE event
+                    service: "cloudfront",
+                    action: "AssociateAlias",
+                    parameters: associateAliasParams,
+                    physicalResourceId: cr.PhysicalResourceId.of(
+                        this.props.targetDistribution.distributionId,
+                    ),
+                },
+                policy: cr.AwsCustomResourcePolicy.fromStatements([
+                    new iam.PolicyStatement({
+                        effect: iam.Effect.ALLOW,
+                        actions: [
+                            "cloudfront:AssociateAlias",
+                            "cloudfront:GetDistribution",
+                            "cloudfront:UpdateDistribution",
+                        ],
+                        resources: ["*"],
+                    }),
+                ]),
+            },
+        );
+        associateAlias.node.addDependency(this.aliasTxtRecord);
 
-    return associateAlias;
-  }
+        return associateAlias;
+    }
 
-  private createAliasRecords(): void {
-    const target = route53.RecordTarget.fromAlias(
-      new r53Targets.CloudFrontTarget(this.props.targetDistribution),
-    );
+    private createAliasRecords(): void {
+        const target = route53.RecordTarget.fromAlias(
+            new r53Targets.CloudFrontTarget(this.props.targetDistribution),
+        );
 
-    const aRecord = new route53.ARecord(this, `${this.id}-ARecord`, {
-      zone: this.props.hostedZone,
-      recordName: this.props.alias,
-      target,
-    });
-    aRecord.node.addDependency(this.associatedAlias);
+        const aRecord = new route53.ARecord(this, `${this.id}-ARecord`, {
+            zone: this.props.hostedZone,
+            recordName: this.props.alias,
+            target,
+        });
+        aRecord.node.addDependency(this.associatedAlias);
 
-    const aaaaRecord = new route53.AaaaRecord(this, `${this.id}-AaaaRecord`, {
-      zone: this.props.hostedZone,
-      recordName: this.props.alias,
-      target,
-    });
-    aaaaRecord.node.addDependency(this.associatedAlias);
-  }
+        const aaaaRecord = new route53.AaaaRecord(
+            this,
+            `${this.id}-AaaaRecord`,
+            {
+                zone: this.props.hostedZone,
+                recordName: this.props.alias,
+                target,
+            },
+        );
+        aaaaRecord.node.addDependency(this.associatedAlias);
+    }
 }
