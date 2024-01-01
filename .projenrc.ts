@@ -52,6 +52,7 @@ const project = new Node20AwsCdkConstructLibrary({
 
     publishToGo: {
         moduleName: `github.com/${GITHUB_USERNAME_OR_ORG}/${PROJECT_NAME}`,
+        gitBranch: "publish-go"
     },
 
     // publishToMaven: {
