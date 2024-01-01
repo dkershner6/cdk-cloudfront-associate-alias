@@ -31,27 +31,33 @@ new CloudfrontAliasAssociator(stack, "TestConstruct", {
 it("should create 3 RecordSets (1 TXT, 1 A, 1 AAAA)", () => {
     const template = Template.fromStack(stack);
 
-    template.resourceCountIs("AWS::Route53::RecordSet", 3);
+    expect(() =>
+        template.resourceCountIs("AWS::Route53::RecordSet", 3),
+    ).not.toThrow();
 });
 
 it("Should create a Custom::CloudfrontAssociateAlias resource", () => {
     const template = Template.fromStack(stack);
 
-    template.resourceCountIs("Custom::CloudfrontAssociateAlias", 1);
+    expect(() =>
+        template.resourceCountIs("Custom::CloudfrontAssociateAlias", 1),
+    ).not.toThrow();
 });
 
 it("Should hand Custom::CloudfrontAssociateAlias the correct parameters", () => {
     const template = Template.fromStack(stack);
 
-    template.hasResourceProperties("Custom::CloudfrontAssociateAlias", {
-        Update: JSON.stringify({
-            service: "cloudfront",
-            action: "AssociateAlias",
-            parameters: {
-                TargetDistributionId: TEST_DISTRIBUTION_ID,
-                Alias: TEST_ALIAS,
-            },
-            physicalResourceId: { id: TEST_DISTRIBUTION_ID },
+    expect(() =>
+        template.hasResourceProperties("Custom::CloudfrontAssociateAlias", {
+            Update: JSON.stringify({
+                service: "cloudfront",
+                action: "AssociateAlias",
+                parameters: {
+                    TargetDistributionId: TEST_DISTRIBUTION_ID,
+                    Alias: TEST_ALIAS,
+                },
+                physicalResourceId: { id: TEST_DISTRIBUTION_ID },
+            }),
         }),
-    });
+    ).not.toThrow();
 });
